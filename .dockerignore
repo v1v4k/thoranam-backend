@@ -1,0 +1,11 @@
+.git
+.agents
+AGENTS.md
+node_modules
+dist
+dist-test
+coverage
+.env
+.env.*
+!.env.example
+*.log

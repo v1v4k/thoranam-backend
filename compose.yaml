@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:17.9-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-thoranam}
+      POSTGRES_USER: ${POSTGRES_USER:-thoranam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thoranam_local}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-55432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+  api:
+    build: .
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-thoranam}:${POSTGRES_PASSWORD:-thoranam_local}@db:5432/${POSTGRES_DB:-thoranam}
+      DATABASE_SSL: 'false'
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    ports:
+      - '127.0.0.1:${PORT:-3001}:3001'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/api/v1/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
